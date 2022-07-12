@@ -1,0 +1,13 @@
+,label,active,investment,nonconvex_flow,in_1,in_2,out_1,out_2,eff_in_1,eff_in_2,eff_out_1,eff_out_2,flow.nominal_value,flow.variable_costs,flow.emission_factor,flow.summed_max,flow.summed_min,flow.max,flow.min,invest.maximum,invest.ep_costs,invest.offset
+0,t_boiler,1,1,,b_gas,0,b_heat,0,1,,0.95,,3000.0,,,,,,,3000.0,6.086753859396779,0.0
+1,t_chp,1,1,,b_gas,0,b_elec,b_heat,1,,0.38,0.55,,,,,500.0,,,2000.0,112.82547225024412,0.0
+2,t_dhs_pump,1,0,,b_heat,b_elec,b_heat_grid,0,1,0.015,1,,,,,,,,,,0.0,0.0
+3,t_hp_air,1,1,,b_elec,0,b_heat,0,1,,series,,,,,,500.0,series,,2000.0,61.60205345958263,0.0
+4,t_hp_geo,1,1,,b_elec,0,b_heat,0,1,,series,,,,,2500.0,500.0,,,1000.0,124.92724128167107,0.0
+5,t_ely,1,1,,b_elec,0,b_H2,b_heat_50,1,,0.62,0.18,,,,,500.0,,,1000.0,172.31343625058076,0.0
+6,t_hp_ely,1,1,,b_elec,b_heat_50,b_heat,0,1,series,series,,,,,,,,,1000.0,38.770523156380676,0.0
+7,t_H2tostorage,1,0,,b_H2,0,b_H2_s_in,0,1,,1,,,,,,,,,2000.0,0.0,0.0
+8,t_H2_storage_compressor,1,1,,b_H2_s_in,b_elec,b_H2_200_in,0,1,0.12,1,,,,,,,,,2000.0,16.45207556003906,0.0
+9,t_H2_storage_expansion,1,0,,b_H2_200_out,0,b_H2_s_out,0,1,,1,,,,,,,,,2000.0,0.0,0.0
+10,t_H2togas,1,0,,b_H2,0,b_gas,0,1,,1,,,,,,,,,2000.0,0.0,0.0
+11,t_H2storagetogas,1,0,,b_H2_s_out,0,b_gas,0,1,,1,,,,,,,,,2000.0,0.0,0.0

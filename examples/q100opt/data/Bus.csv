@@ -1,0 +1,11 @@
+label,active,excess,shortage,shortage_costs,excess_costs
+b_gas,1,0,0,9999,9999
+b_elec,1,0,0,9999,9999
+b_heat,1,0,0,9999,9999
+b_heat_grid,1,0,0,9999,9999
+b_heat_50,1,0,0,9999,9999
+b_H2,1,0,0,9999,9999
+b_H2_s_in,1,0,0,9999,9999
+b_H2_200_in,1,0,0,9999,9999
+b_H2_s_out,1,0,0,9999,9999
+b_H2_200_out,1,0,0,9999,9999

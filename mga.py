@@ -8,9 +8,12 @@ SPDX-License-Identifier: MIT
 import logging
 import warnings
 from logging import getLogger
+import os
+
 import pandas as pd
 
 import oemof.solph as solph
+from oemof.solph import views
 from pyomo import environ as po
 
 
@@ -49,6 +52,13 @@ class MGA:
         self.solver = solver
         self.solutions = {}
         self.objectives = {}
+        self.results_dir = kwargs.get(
+            "results_dir",
+            os.path.join(os.path.expanduser("~"), "oemof-mga", "results")
+        )
+
+        if not os.path.exists(self.results_dir):
+            os.makedirs(self.results_dir)
 
     def _build_base_model(self):
         """(Re)Builds the base model.
@@ -75,7 +85,8 @@ class MGA:
         self.base_objective_value = self._model.objective()
         self.base_solution = self._model.results()
         self.solutions.update(
-            {("base_solution", 0, 1): self.base_solution}
+            {(("base_solution", "base_solution"), 0, 1): self.base_solution,
+             (("base_solution", "base_solution"), 0, -1): self.base_solution}
         )
 
     def calculate_near_optimal_solution(
@@ -102,7 +113,7 @@ class MGA:
 
         self._model.del_component("near_optimal_costraint")
 
-        self._model.InvestmentFlowBlock.del_component(
+        self._model.InvestmentFlow.del_component(
             "investment_costs")
         self._model.GenericInvestmentStorageBlock.del_component(
             "investment_costs")
@@ -155,12 +166,12 @@ class MGA:
 
         if objectives is None:
             objectives = {
-                k: v
-                for (k, v) in self._model.InvestmentFlowBlock.invest.items()
+                (k[0].label, k[1].label): v
+                for (k, v) in self._model.InvestmentFlow.invest.items()
             }
             objectives.update(
-                {
-                    k: v
+                {   # needs to k,k because investment is at node not flow..
+                    (k.label, k.label): v
                     for (
                         k,
                         v,
@@ -181,7 +192,60 @@ class MGA:
                         eps=eps, sense=sense, solution_name=solution_name)
 
 
-    def get_invest_values(self):
+    def get_all_sequences(self, results):
+        """
+        Copied from J. Röder q100opt repository. Thank you!
+        """
+
+        d_node_types = {
+            'sink': solph.Sink,
+            'source': solph.Source,
+            'transformer': solph.Transformer,
+            'storage_flow': solph.GenericStorage,
+        }
+
+        l_df = []
+
+        for typ, solph_class in d_node_types.items():
+            group = {
+                k: v["sequences"]
+                for k, v in results.items()
+                if k[1] is not None
+                if isinstance(k[0], solph_class) or isinstance(k[1], solph_class)
+            }
+
+            df = views.convert_to_multiindex(group)
+            df_mi = df.columns.to_frame()
+            df_mi.reset_index(drop=True, inplace=True)
+            df_mi['from'] = [x.label for x in df_mi['from']]
+            df_mi['to'] = [x.label for x in df_mi['to']]
+            df_mi['type'] = typ
+            df.columns = pd.MultiIndex.from_frame(df_mi[['type', 'from', 'to']])
+
+            l_df.append(df)
+
+        df_results = pd.concat(l_df, axis=1)
+
+        # add storage content with extra type=storage_content
+        group = {
+            k: v["sequences"]
+            for k, v in results.items()
+            if k[1] is None
+            if isinstance(k[0], solph.GenericStorage) or isinstance(
+                k[1], solph.GenericStorage)
+        }
+        df = views.convert_to_multiindex(group)
+        df_mi = df.columns.to_frame()
+        df_mi.reset_index(drop=True, inplace=True)
+        df_mi['from'] = [x.label for x in df_mi['from']]
+        df.columns = pd.MultiIndex.from_frame(df_mi[['type', 'from', 'to']])
+
+        df_results = pd.concat([df_results, df], axis=1)
+
+        return df_results
+
+
+    def generate_invest_table(self, filename="invest_table.csv"):
         """ Get all investment values for the generated solutions
         """
         if bool(self.solutions) is False:
@@ -189,21 +253,15 @@ class MGA:
                 "No solutions found."
                 " Run .explore_near_optimal_space() to generate solutions."
             )
-
         invest_results = {}
         for k, v in self.solutions.items():
-            if isinstance(
-                k[0], solph.components._generic_storage.GenericStorage):
-                k = ((k[0], k[0]), k[1], k[2])
-            # need to do str conversion for None in storage label
-
             temp_dict = {}
             for x in v.keys():
                 if hasattr(v[x]["scalars"], "invest"):
                     if x[1] is None:
-                        key = (x[0], x[0])
+                        key = (x[0].label, x[0].label)
                     else:
-                        key = (x[0], x[1])
+                        key = (x[0].label, x[1].label)
                     temp_dict.update({key: v[x]["scalars"]["invest"]})
             invest_results[k] = temp_dict
 
@@ -212,4 +270,45 @@ class MGA:
         invest_df.sort_index(inplace=True, axis=1)
         invest_df.sort_index(inplace=True, axis=0)
 
+        # convert tuple index to columns to create multiindex without tuples
+        invest_df.reset_index(0, inplace=True)
+        invest_df[['from', 'to']] = pd.DataFrame(
+            invest_df['objective'].tolist(), index=invest_df.index)
+
+        invest_df = invest_df.set_index(["from", "to"], append=True)
+        # to get: "from, to, eps, sense"
+        invest_df = invest_df.swaplevel(1,3).swaplevel(0,2)
+
+        invest_df.drop("objective", axis=1, inplace=True)
+
+        if filename:
+            invest_df.to_csv(
+                os.path.join(self.results_dir, filename))
+
         return invest_df
+
+    def store_sequences(self, folder=None):
+        """Write all sequences from all solutions to csv files
+        """
+        if folder is None:
+            folder = os.path.join(self.results_dir, "sequences")
+
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+
+        for name, result in self.solutions.items():
+            df = self.get_all_sequences(result)
+            df.to_csv(os.path.join(folder, str(name) + ".csv"))
+
+    def read_invest_table(self, filepath=None):
+        """
+        """
+        if filepath is None:
+            filepath = os.path.join(self.results_dir, "invest_table.csv")
+            
+        if not os.path.exists(filepath):
+            raise ValueError("File `{}` not found".format(filepath))
+        df = pd.read_csv(
+                filepath,
+                index_col=[0, 1, 2, 3], header=[0, 1])
+        return df

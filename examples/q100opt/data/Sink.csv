@@ -1,0 +1,3 @@
+,label,active,from,flow.variable_costs,flow.emission_factor
+0,elec_sell,1,b_elec,series,series
+1,H2_feedin,1,b_H2,-0.0175,-0.202

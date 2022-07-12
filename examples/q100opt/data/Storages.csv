@@ -1,0 +1,4 @@
+,label,active,investment,bus,bus_out,storage.nominal_storage_capacity,storage.loss_rate,storage.fixed_losses_relative,storage.inflow_conversion_factor,storage.outflow_conversion_factor,storage.invest_relation_input_capacity,storage.invest_relation_output_capacity,invest.maximum,inflow.nominal_value,outflow.nominal_value,invest.ep_costs,invest.offset
+0,s_heat_d30,1,1,b_heat,,,0.0001,0.0002,0.999,0.999,0.2,0.2,70000,2500,2500,0.665082111,0
+1,s_elec,1,1,b_elec,,,0,0,0.95,0.95,0.55,0.55,10000,,,50.60474686,0
+2,s_H2,1,1,b_H2_200_in,b_H2_200_out,,0,0,0.995,0.995,,,60000,,,0.835799068,0

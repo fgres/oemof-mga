@@ -1,0 +1,4 @@
+label,active,from,nominal_value
+demand_heat,1,b_heat_grid,1
+dhs_loss,1,b_heat_grid,1
+demand_elec,1,b_elec,1
